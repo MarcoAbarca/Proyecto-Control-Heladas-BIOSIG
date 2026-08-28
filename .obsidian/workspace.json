@@ -1,0 +1,212 @@
+{
+  "main": {
+    "id": "ff8dd55b737195d1",
+    "type": "split",
+    "children": [
+      {
+        "id": "c1e8ff62d97e8298",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a2cafd81b0d3a705",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Vista gráfica"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "4b40ed023f43e5c5",
+    "type": "split",
+    "children": [
+      {
+        "id": "d6585d9d03fea7fd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1482cc6cc67f5583",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "352463157e6a1cb2",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "7bf7247387d5e348",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "a860c903cb6a0412",
+    "type": "split",
+    "children": [
+      {
+        "id": "e73970fdcaeba00e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4ed5542cca3743bb",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "01_Documentacion/01_Especificaciones/Especificaciones.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes"
+            }
+          },
+          {
+            "id": "907d6a8b73c3677d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "01_Documentacion/01_Especificaciones/Especificaciones.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes"
+            }
+          },
+          {
+            "id": "8ba980d63b143055",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "e4718ffb893a588e",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "992b00ae70fa8045",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "01_Documentacion/01_Especificaciones/Especificaciones.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "a2cafd81b0d3a705",
+  "lastOpenFiles": [
+    "01_Documentacion/03_Protocolos_Datos/Estructura_Archivos_MicroSD.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Guia_de_Configuracion_PlatformIO.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Gateway.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Emisor.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Pines_y_Bus_I2C.md",
+    "01_Documentacion/01_Especificaciones/Cotizacion_Agosto2026.md",
+    "01_Documentacion/02_Arquitectura_Hardware/BOM_Lista_Materiales.md",
+    "01_Documentacion/05_Gestion_y_Cotizaciones/Hoja_de_Ruta_y_Cronograma.md",
+    "01_Documentacion/Indice.md",
+    "01_Documentacion/01_Especificaciones/SRS_Requerimientos_Sistema.md",
+    "01_Documentacion/Index.md",
+    "01_Documentacion/04_Firmware_y_Software/FSD_Especificacion_Firmware.md",
+    "01_Documentacion/04_Firmware_y_Software/Guia_de_Configuracion_PlatformIO.md",
+    "01_Documentacion/03_Protocolos_Datos/FSD_Especificacion_Firmware.md",
+    "01_Documentacion/03_Protocolos_Datos/ICD_Payload_LoRa.md",
+    "README.md",
+    "01_Documentacion/01_Especificaciones/Manual_de_Operacion_y_Mantenimiento.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Sin nombre",
+    "01_Documentacion/02_Arquitectura_Hardware/Calculo_Autonomia_y_Energia.md",
+    "03_Firmware/Test/Test_Adafruit_MLX90614-OK/Test_Adafruit_MLX90614-OK 1.ino",
+    "01_Documentacion/00_Meta/Attachments",
+    "01_Documentacion/02_Arquitectura_Hardware/Lista_de_Materiales.md"
+  ]
+}

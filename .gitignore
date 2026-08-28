@@ -1,0 +1,14 @@
+# Archivos de Compilacion y Entornos de Codigo
+.pio/
+.vscode/
+.idea/
+*.bin
+*.elf
+
+# Archivos Temporales de Obsidian
+01_Documentacion/.obsidian/workspace.json
+01_Documentacion/.obsidian/workspace-mobile.json
+
+# Archivos Temporales de Sistema Operativo
+.DS_Store
+Thumbs.db
