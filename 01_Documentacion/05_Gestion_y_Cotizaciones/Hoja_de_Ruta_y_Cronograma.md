@@ -4,13 +4,13 @@
 
 - [x] **Etapa 1: Definición, Arquitectura y Adquisición de Hardware** _(Completado)_
     
-- [ ] **Etapa 2: Pruebas Aisladas en Mesa / Banco (Arduino IDE)** _(En Progreso)_
+- [x] **Etapa 2: Pruebas Aisladas en Mesa / Banco (Arduino IDE)** _(En Progreso)_
     
-- [ ] **Etapa 3: Integración de Firmware Modular (PlatformIO)**
+- [x] **Etapa 3: Integración de Firmware Modular (PlatformIO)**
     
-- [ ] **Etapa 4: Ensamble Físico, Cableado y Gabinete IP65**
+- [x] **Etapa 4: Ensamble Físico, Cableado y Gabinete IP65**
     
-- [ ] **Etapa 5: Enlace LoRa, Gateway y Almacenamiento Local**
+- [x] **Etapa 5: Enlace LoRa, Gateway y Almacenamiento Local**
     
 - [ ] **Etapa 6: Despliegue en Terreno y Validación Agrícola**
     
@@ -23,7 +23,7 @@
     
 - [x] Seleccionar componentes de procesador y radio (Seeed Studio XIAO ESP32-S3 + Wio-SX1262 LoRa 915 MHz).
     
-- [x] Diseñar el bus I2C extendido mediante multiplexor TCA9548A y extensores P82B715 con cable Cat6.
+- [x] Diseñar el bus I2C extendido mediante multiplexor PCA9548A y extensores P82B715 con cable Cat6.
     
 - [x] Validar el presupuesto energético y la batería Li-Ion 18650 (6800 mAh + Panel Solar 1W).
     
@@ -40,30 +40,30 @@ _Objetivo: Probar cada sensor/módulo de forma individual para descartar fallas 
     
 - [x] **Prueba 02 - MLX90614 (GY-906):** Probar sensor infrarrojo foliar vía I2C directo.
     
-- [x] **Prueba 03 - Multiplexor TCA9548A:** Probar conmutación de canales I2C (`0x70`) y escaneo de direcciones.
+- [x] **Prueba 03 - Multiplexor PCA9548A:** Probar conmutación de canales I2C (`0x70`) y escaneo de direcciones.
     
-- [ ] **Prueba 04 - Bus Extendido (P82B715):** Medir lecturas del MLX90614 a través del tramo de 10 metros de cable Cat6.
+- [x] **Prueba 04 - Bus Extendido (P82B715):** Medir lecturas del MLX90614 a través del tramo de 10 metros de cable Cat6.
     
-- [ ] **Prueba 05 - Radio LoRa SX1262:** Enviar y recibir un paquete básico "Hello World" a 915 MHz.
+- [x] **Prueba 05 - Radio LoRa SX1262:** Enviar y recibir un paquete básico "Hello World" a 915 MHz.
     
-- [ ] **Prueba 06 - Sonda de Suelo + SD/Flash:** Verificar lecturas analógicas/capacitivas y escritura local de archivos.
+- [x] **Prueba 06 - Sonda de Suelo + SD/Flash:** Verificar lecturas analógicas/capacitivas y escritura local de archivos.
     
 
 ### 🔹 Etapa 3: Integración de Firmware Modular en PlatformIO _(Semana 4)_
 
 _Objetivo: Consolidar el código probado en una arquitectura no bloqueante (FSM) dentro del entorno PlatformIO._
 
-- [ ] Configurar entorno PlatformIO (`platformio.ini`) con flags del XIAO ESP32-S3.
+- [x] Configurar entorno PlatformIO (`platformio.ini`) con flags del XIAO ESP32-S3.
     
-- [ ] Crear el gestor del bus I2C (`i2c_bus`) y la librería de control del multiplexor TCA9548A.
+- [x] Crear el gestor del bus I2C (`i2c_bus`) y la librería de control del multiplexor PCA9548A.
     
-- [ ] Crear el módulo de empaquetado de datos en estructura binaria (`LoRaPayload` de 15 bytes).
+- [x] Crear el módulo de empaquetado de datos en estructura binaria (`LoRaPayload` de 15 bytes).
     
-- [ ] Implementar la máquina de estados con rutina de **Deep Sleep** (15 min de reposo / ráfaga de 5s).
+- [x] Implementar la máquina de estados con rutina de **Deep Sleep** (15 min de reposo / ráfaga de 5s).
     
-- [ ] Programar respaldo de seguridad en memoria Flash interna (`LittleFS`).
+- [x] Programar respaldo de seguridad en memoria Flash interna (`LittleFS`).
     
-- [ ] Programar el firmware receptor continuo para el Gateway con volcado de datos a MicroSD (`DATALOG.CSV`).
+- [x] Programar el firmware receptor continuo para el Gateway con volcado de datos a MicroSD (`telemetria_acumulado.csv`).
     
 
 ### 🔹 Etapa 4: Ensamble Físico, Cableado y Gabinete IP65 _(Semana 5)_

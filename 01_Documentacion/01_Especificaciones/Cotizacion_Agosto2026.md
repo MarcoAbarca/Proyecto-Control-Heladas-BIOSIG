@@ -41,7 +41,7 @@
         
     - _Costo Subtotal:_ $4.500 CLP.
         
-- **1x Sensor Capacitivo de Humedad de Suelo + Sonda Térmica NTC:**
+- **1x Sensor Capacitivo de Humedad de Suelo + Sonda Térmica NTC:** ⚠️ Solo la parte capacitiva está implementada en firmware.
     
     - _Estado:_ Adquirido.
         
@@ -50,7 +50,7 @@
 
 ### 2.3 Electrónica de Bus Extendido (Gestión I2C)
 
-- **1x Módulo Multiplexor I2C TCA9548A / PCA9548A:** Dirección base `0x70` para conmutación de canal.
+- **1x Módulo Multiplexor I2C PCA9548A:** Dirección base `0x70` para conmutación de canal.
     
     - _Estado:_ **PENDIENTE DE COMPRA**.
         
@@ -113,7 +113,7 @@
 
 ## 3. Observaciones y Pendientes Directos de Compra
 
-1. **Prioridad de Adquisición:** Se debe concretar el pedido de los **6x P82B715** y el **1x TCA9548A** para cerrar la infraestructura electrónica del bus de datos.
+1. **Prioridad de Adquisición:** Se debe concretar el pedido de los **6x P82B715** y el **1x PCA9548A** para cerrar la infraestructura electrónica del bus de datos.
     
 2. **Material de Impresión 3D:** Asegurar el uso de PETG o ASA para las viseras de los sensores MLX90614, descartando PLA debido a la degradación por radiación solar y humedad continua en el huerto.
 

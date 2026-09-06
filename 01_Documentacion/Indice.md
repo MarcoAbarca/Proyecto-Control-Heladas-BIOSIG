@@ -15,7 +15,6 @@ Bienvenido a la bóveda de documentación técnica del sistema IoT para el monit
 
 ### 02. Arquitectura de Hardware
 * [[02_Arquitectura_Hardware/BOM_Lista_Materiales|BOM - Lista de Materiales]]: Listado oficial de componentes electrónicos y accesorios.
-* [[02_Arquitectura_Hardware/01_Guia_de_Ensamblado_Nodo_Emisor|Guía de Ensamblado del Nodo Emisor]]: Instrucciones de ensamble físico e integración en gabinete IP65.
 * [[02_Arquitectura_Hardware/Pines_y_Bus_I2C|Pinout y Bus I2C]]: Asignación de GPIOs, direcciones I2C y extensores P82B715.
 * [[02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Emisor|Presupuesto Energético del Nodo Emisor]]: Análisis de consumo, baterías 18650 y ciclo solar.
 * [[02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Gateway|Presupuesto Energético del Nodo Gateway]]: Especificaciones de alimentación continua 24/7.
@@ -24,7 +23,7 @@ Bienvenido a la bóveda de documentación técnica del sistema IoT para el monit
 ---
 
 ### 03. Protocolos de Datos
-* [[03_Protocolos_Datos/ICD_Payload_LoRa|Estructura del Payload LoRa (ICD)]]: Definición del formato binario de 15 bytes transmitido a 915 MHz.
+* [[03_Protocolos_Datos/ICD_Payload_LoRa|Estructura del Payload LoRa (ICD)]]: Definición del formato binario de 23 bytes transmitido a 915 MHz.
 * [[03_Protocolos_Datos/Estructura_Archivos_MicroSD|Estructura de Archivos en MicroSD]]: Formato de almacenamiento offline, tablas CSV y respaldos LittleFS.
 
 ---
@@ -44,16 +43,11 @@ Bienvenido a la bóveda de documentación técnica del sistema IoT para el monit
 ```text
 01_Documentacion/
 ├── Indice.md
-├── 00_Meta/
-│   ├── Adjuntos/
-│   ├── Attachments/
-│   └── Plantillas/
 ├── 01_Especificaciones/
 │   ├── Cotizacion_Agosto2026.md
 │   ├── Manual_de_Operacion_y_Mantenimiento.md
 │   └── SRS_Requerimientos_Sistema.md
 ├── 02_Arquitectura_Hardware/
-│   ├── 01_Guia_de_Ensamblado_Nodo_Emisor.md
 │   ├── BOM_Lista_Materiales.md
 │   ├── Guia_de_Configuracion_PlatformIO.md
 │   ├── Pines_y_Bus_I2C.md

@@ -109,14 +109,10 @@ bool recoverBus() {
 // -----------------------------------------------------------------------------
 const char* identifyDevice(uint8_t address) {
     switch (address) {
-        case PCA9548A_ADDR:         return "PCA9548A (Multiplexor)";
-        case ADDR_BME280_PRIMARY:   return "BME280 (primario)";
-        case ADDR_BME280_SECONDARY: return "BME280 (secundario)";
-        case ADDR_SHT3X_PRIMARY:    return "SHT3x (primario)";
-        case ADDR_SHT3X_SECONDARY:  return "SHT3x (secundario)";
-        case ADDR_MPU6050_PRIMARY:  return "MPU6050 (primario)";
-        case ADDR_MPU6050_SECONDARY: return "MPU6050 (secundario)";
-        default:                    return "Desconocido";
+        case PCA9548A_ADDR:    return "PCA9548A (Multiplexor)";
+        case ADDR_MLX90614:    return "MLX90614 (estrato de copa)";
+        case ADDR_BME280_LOCAL: return "BME280 (base)";
+        default:               return "Desconocido";
     }
 }
 
@@ -183,12 +179,12 @@ void scanAllMuxChannels() {
     scanBus();
 
     for (uint8_t ch = 0; ch < PCA9548A_CHANNEL_COUNT; ch++) {
-        // El Canal 0 corresponde al extensor P82B715 sobre Cat6: se baja
-        // la frecuencia antes de escanear para no arriesgar falsos
-        // negativos por la capacitancia adicional del cable.
-        if (ch == CH_EXT_LONGBUS) {
+        // Canales 0-2: MLX90614 vía P82B715 (extendido, cable Cat6) -> 100kHz.
+        // Canal 3: BME280 en la propia PCB (local) -> 400kHz.
+        // Canales 4-7: reservados, se escanean igual a 400kHz por si acaso.
+        if (ch == CH_MLX_TOP || ch == CH_MLX_MID || ch == CH_MLX_LOW) {
             setFrequency(I2C_FREQ_EXTENDED_HZ);
-            Serial.println(F("\n[I2CBus] === Canal 0 (P82B715 / bus extendido Cat6) ==="));
+            Serial.printf("\n[I2CBus] === Canal %d (MLX90614 / bus extendido Cat6) ===\n", ch);
         } else {
             setFrequency(I2C_FREQ_LOCAL_HZ);
             Serial.printf("\n[I2CBus] === Canal %d (bus local) ===\n", ch);

@@ -21,10 +21,8 @@ El sistema recopila datos de temperatura ambiental y foliar en tres estratos (su
         ├─ Flash Interna (LittleFS 8 MB)             │ Lector MicroSD    │
         │                                            │ (DATALOG.CSV)     │
         ├─ PCA9548A (Multiplexor I2C)                └───────────────────┘
-        │   ├─ Ch 0: Extensor P82B715 ── (Cat6 2m) ──> Sensores Copa
-        │   ├─ Ch 1: Sensor Infrarrojo MLX90614 (Estrato Superior)
-        │   ├─ Ch 2: Sensor Infrarrojo MLX90614 (Estrato Medio)
-        │   └─ Ch 3: Sensor Infrarrojo MLX90614 (Estrato Inferior)
+        │   ├─ Ch 0-2: Extensor P82B715 -> MLX90614 (Top/Mid/Low)
+        │   ├─ Ch 3: BME280 (base, local)
         │
         └─ Sensor Capacitivo / Temperatura de Suelo
 

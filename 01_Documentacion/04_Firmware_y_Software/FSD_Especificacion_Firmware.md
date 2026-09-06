@@ -1,115 +1,69 @@
 ## 1. Descripción General
+PlatformIO + Arduino (C++), Seeed XIAO ESP32-S3. Un solo `platformio.ini` con **dos entornos** (`nodo_emisor`/`nodo_receptor`, build flags `NODE_ROLE_EMISOR`/`NODE_ROLE_RECEPTOR`), no dos repos separados. Compilar con `pio run -e nodo_emisor` o `-e nodo_receptor`.
 
-El firmware está desarrollado sobre el entorno **PlatformIO** utilizando el framework **Arduino (C++)** para el microcontrolador **Seeed Studio XIAO ESP32-S3**. El proyecto utiliza un enfoque de compilación condicional dentro de un único monorepositorio para gestionar dos binarios independientes:
-
-1. **Nodo Emisor (Campo):** Arquitectura orientada a ultra-bajo consumo impulsada por eventos y temporización RTC.
-2. **Nodo Receptor (Gateway Galpón):** Arquitectura de escucha activa continua, procesamiento de paquetes LoRa, almacenamiento en MicroSD y envío de telemetría hacia servicios en la nube.
-
-## 2. Máquina de Estados del Nodo Emisor (Campo)
-
-El firmware del nodo emisor opera como una máquina de estados finitos (FSM) que permanece en modo **Deep Sleep** el $99.4\%$ del tiempo para garantizar la autonomía energética a partir del banco de baterías 18650 y la celda solar.
-
-Plaintext
+## 2. FSM del Nodo Emisor (lineal, no loop continuo)
+Cada Deep Sleep reinicia el chip: `setup()` corre una vez por ciclo y termina en `esp_deep_sleep_start()` (nunca retorna). No hay `switch(state)` en loop() — es una secuencia de funciones.
 
 ```
- ┌────────────────────────────────────────────────────────┐
- │                    STATE_DEEP_SLEEP                    │
- │         (XIAO ESP32-S3 en reposo @ ~0.156 mA)          │
- └───────────────────────────┬────────────────────────────┘
-                             │ Timer RTC Alarm (15 Minutos)
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │                     STATE_INIT                         │
- │  - Inicializar Power Rails & Bus I2C / SPI             │
- │  - Montar sistema de archivos LittleFS                 │
- └───────────────────────────┬────────────────────────────┘
-                             │ Init OK
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │                    STATE_READ_SENSORS                  │
- │  - Conmutar Mux TCA9548A (Canales 1, 2, 3 para IRs)    │
- │  - Leer BME280 (Canal 0) y Sonda Capacitiva Suelo      │
- └───────────────────────────┬────────────────────────────┘
-                             │ Lecturas completadas
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │                   STATE_SAVE_LOCAL                     │
- │  - Empaquetar struct LoRaPayload                       │
- │  - Escribir respaldo en Flash Interna (LittleFS)       │
- └───────────────────────────┬────────────────────────────┘
-                             │ Persistencia OK
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │                     STATE_LORA_TX                      │
- │  - Inicializar SX1262 (Frecuencia: 915 MHz, SF7)       │
- │  - Transmitir ráfaga binaria (15 Bytes, +22 dBm)       │
- └───────────────────────────┬────────────────────────────┘
-                             │ TX Done / Timeout (5s max)
-                             ▼
- ┌────────────────────────────────────────────────────────┐
- │                     STATE_SLEEP_PREP                   │
- │  - Desconectar buses I2C / SPI                         │
- │  - Configurar RTC Timer wakeup (900 segundos)          │
- │  - Ejecutar esp_deep_sleep_start()                     │
- └────────────────────────────────────────────────────────┘
+Wakeup (timer RTC 15min) → I2C&Sensor Init → Read Sensors → Evaluate Alerts
+  → Save LittleFS → LoRa P2P TX → enterDeepSleep()
 ```
 
-## 3. Especificación Módulos del Firmware
+* **I2C&Sensor Init:** `I2CBus::begin()`; si el bus está atascado, `recoverBus()`. Si `mux.begin()` falla, se activa `FLAG_I2C_BUS_ERROR` y se **saltan directo** las 4 lecturas I2C (optimización: evita ~400ms de timeouts) yendo directo a `readSoilAndBatteryOnly()`.
+* **Read Sensors:** `SensorManager::readAllInto()` — 3x MLX90614 (Ch0-2, 100kHz) + BME280 (Ch3, 400kHz) + suelo/batería por ADC (no dependen del mux).
+* **Evaluate Alerts:** `evaluateAlerts()` en main.cpp, compara contra `FROST_THRESHOLD_C`/`OVERHEAT_THRESHOLD_C`.
+* **Save LittleFS:** `LittleFSManager::logPayload()`, CSV en `/telemetria_local.csv` (texto, no binario — corrige versión anterior que hablaba de `log.bin`).
+* **LoRa P2P TX:** se transmite SIEMPRE, incluso con payload degradado (bus caído) — es la "señal de vida" del nodo, no hay un modo de emergencia separado.
+* **RTC_DATA_ATTR:** `g_sequenceNumber` (persiste el contador) y `g_consecutiveEmptyReads` (diagnóstico, no viaja en el payload — los 16 bits de statusFlags ya están asignados).
 
-### A. Módulo I2C y Multiplexión (`SensorManager`)
+## 3. Módulos
+### SensorManager (Ch0-2 MLX90614, Ch3 BME280)
+Pines I2C D4(SDA)/D5(SCL). Aislamiento estricto: `PCA9548A::selectChannel(canal, frecuencia)` nunca activa más de un canal a la vez (los 3 MLX90614 comparten dirección 0x5A).
 
-- **Gestión de Buses:** El bus I2C nativo opera en los pines `D4` (SDA) y `D5` (SCL) del XIAO ESP32-S3 a una frecuencia de $100\text{ kHz}$ (Standard Mode) para asegurar la integridad de la señal a través de los extensores de bus P82B715 y el cable Cat6.
-    
-- **Rutina del Multiplexor TCA9548A:**
-    
-    1. Escribir registro `0x70` con mascara de bit `0x02` (Canal 1 - Sensor Foliar Superior).
-    2. Adquirir temperatura de objeto y ambiente desde el sensor MLX90614.
-    3. Replicar para Canal 2 (`0x04` - Foliar Medio) y Canal 3 (`0x08` - Foliar Inferior).
-    4. Desactivar todos los canales escribiendo `0x00` en el Mux para evitar colisiones en la línea.
+### LittleFSManager (solo Emisor)
+`LittleFS.begin(true)` (auto-formatea si falla el montaje). Log en `/telemetria_local.csv`, texto CSV con header + append, `file.close()` (flush) antes de dormir.
 
-### B. Módulo de Almacenamiento Local (`StorageManager`)
+### LoRaManager (RadioLib, SX1262)
+- Emisor: `transmitPayload()`, bloqueante pero acotado (~100-200ms a SF7).
+- Receptor: time-multiplexa el mismo radio entre escucha P2P continua y bridging LoRaWAN/TTN periódico (`TTN_UPLINK_INTERVAL_MS`, 5min por defecto) — no puede hacer ambas cosas a la vez con un solo módulo de radio.
+- Nota abierta: `bridgeToTTN()` recrea el objeto `LoRaWANNode` en cada ciclo; pendiente evaluar si eso rompe la continuidad del contador de tramas de TTN (ver más abajo).
 
-- **Sistema de Archivos:** `LittleFS` configurado sobre la memoria Flash SPI interna de 8 MB del XIAO ESP32-S3.
-    
-- **Prevención de Corrupción:** El archivo de registro `log.bin` se abre exclusivamente en modo apéndice (`"ab"`) durante el ciclo activo y se ejecuta un `file.flush()` y `file.close()` inmediato antes de entrar en suspensión.
-    
+## 4. Firmware del Receptor
+Loop continuo (sin Deep Sleep, alimentación por cable):
+1. `LISTEN_P2P`: `checkReceivedP2P()` no bloqueante. Cada paquete recibido se guarda COMPLETO en MicroSD vía `SDManager` (`SdFat`, no `SD.h`/`SD.begin()` como decía la versión anterior).
+2. Cada `TTN_UPLINK_INTERVAL_MS`: `BRIDGE_TTN` — sube a TTN solo el ÚLTIMO payload pendiente (no cada paquete P2P; LoRaWAN no aguanta ese volumen), y vuelve a modo P2P.
+3. No hay salida JSON por Serial (la versión anterior lo mencionaba; no está implementado).
 
-### C. Módulo de Transmisión LoRa (`RadioManager`)
-
-- **Librería Base:** `RadioLib` configurada para el chip Semtech SX1262 acoplado al módulo Wio-SX1262.
-- **Control de Errores y Timeouts:**
-    - Si la inicialización del módem falla o la transmisión no completa la interrupción `DIO1` en menos de 2 segundos, el firmware incrementa el registro de errores en la RTC RAM y fuerza el ingreso a _Deep Sleep_ para evitar el agotamiento de la batería por bloqueos de software.
-
-## 4. Firmware del Gateway Receptor (Oficina)
-
-A diferencia del nodo emisor, el Gateway se ejecuta en un bucle continuo de procesamiento sin modo de ahorro de energía:
-
-1. **Escucha LoRa Activa (`RX_CONTINUOUS`):** Mantiene el módem SX1262 en modo de recepción continua a 915 MHz.
-2. **Interrupción por Paquete Entrante:** Al activarse el pin `DIO1` (Packet Received):
-    - Extrae la trama binaria de 15 Bytes.
-        - Verifica la integridad de la longitud y estructura contra la firma `sizeof(LoRaPayload)`.
-3. **Persistencia en MicroSD:** Desempaqueta los campos de datos y escribe una nueva fila en el archivo `DATALOG.CSV` montado sobre la tarjeta MicroSD externa vía el bus SPI dedicado.
-
-4. **Retransmisión Serie / Cloud:** Formatea el paquete desempaquetado a una cadena en formato JSON estandarizado y la emite a través de la interfaz UART USB (`Serial`) para consumo de dashboards locales o aplicaciones de telemetría.    
-## 5. Configuración de PlatformIO (`platformio.ini`)
-Ini, TOML
-
-```
-[env:seeed_xiao_esp32s3]
+## 5. platformio.ini (real, ver 05_Code/platformio.ini)
+```ini
+[platformio]
+default_envs = nodo_emisor
+[env]
 platform = espressif32
 board = seeed_xiao_esp32s3
 framework = arduino
 upload_speed = 921600
 monitor_speed = 115200
-build_flags = 
-    -D CORE_DEBUG_LEVEL=3
-    -D ARDUINO_USB_CDC_ON_BOOT=1
-lib_deps = 
+build_flags = -D CORE_DEBUG_LEVEL=3 -D ARDUINO_USB_CDC_ON_BOOT=1
+lib_deps =
     adafruit/Adafruit BME280 Library @ ^2.2.4
     adafruit/Adafruit Unified Sensor @ ^1.1.14
-    adafruit/Adafruit MPU6050 @ ^2.2.6
-    wollewald/SHT3xDIS @ ^1.0.2
-monitor_filters = 
-    esp32_exception_decoder
-    time
+    adafruit/Adafruit MLX90614 Library @ ^2.1.5
+    jgromes/RadioLib @ ^6.6.0
+monitor_filters = esp32_exception_decoder, time
+
+[env:nodo_emisor]
+build_flags = ${env.build_flags} -D NODE_ROLE_EMISOR
+
+[env:nodo_receptor]
+build_flags = ${env.build_flags} -D NODE_ROLE_RECEPTOR
+lib_deps = ${env.lib_deps}
+    greiman/SdFat @ ^2.2.3
 ```
+*(La versión anterior mostraba un solo entorno sin roles y librerías descartadas hace varias iteraciones: Adafruit MPU6050, wollewald/SHT3xDIS. No se usan.)*
+
+## 6. Pendientes conocidos (no ocultar)
+* TTN/LoRaWAN: en pausa operativa hasta confirmación explícita (ver Hoja de Ruta) — el código existe pero no se ha validado en campo contra un DevEUI real.
+* Persistencia de sesión LoRaWAN en el Receptor entre ciclos de bridging.
+* Downlink para umbrales dinámicos: no implementado, `FROST_THRESHOLD_C`/`OVERHEAT_THRESHOLD_C` son fijos en config.h.
+* Calibración de la sonda de suelo (`SOIL_ADC_DRY_RAW`/`SOIL_ADC_WET_RAW`): placeholders sin calibrar.

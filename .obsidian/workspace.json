@@ -11,10 +11,14 @@
             "id": "a2cafd81b0d3a705",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Vista gráfica"
+              "type": "markdown",
+              "state": {
+                "file": "README.md",
+                "mode": "preview",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "README"
             }
           }
         ]
@@ -184,29 +188,37 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "a2cafd81b0d3a705",
+  "active": "1482cc6cc67f5583",
   "lastOpenFiles": [
-    "01_Documentacion/03_Protocolos_Datos/Estructura_Archivos_MicroSD.md",
-    "01_Documentacion/02_Arquitectura_Hardware/Guia_de_Configuracion_PlatformIO.md",
-    "01_Documentacion/02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Gateway.md",
-    "01_Documentacion/02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Emisor.md",
-    "01_Documentacion/02_Arquitectura_Hardware/Pines_y_Bus_I2C.md",
-    "01_Documentacion/01_Especificaciones/Cotizacion_Agosto2026.md",
-    "01_Documentacion/02_Arquitectura_Hardware/BOM_Lista_Materiales.md",
-    "01_Documentacion/05_Gestion_y_Cotizaciones/Hoja_de_Ruta_y_Cronograma.md",
-    "01_Documentacion/Indice.md",
-    "01_Documentacion/01_Especificaciones/SRS_Requerimientos_Sistema.md",
-    "01_Documentacion/Index.md",
-    "01_Documentacion/04_Firmware_y_Software/FSD_Especificacion_Firmware.md",
-    "01_Documentacion/04_Firmware_y_Software/Guia_de_Configuracion_PlatformIO.md",
-    "01_Documentacion/03_Protocolos_Datos/FSD_Especificacion_Firmware.md",
+    "01_Documentacion.zip",
     "01_Documentacion/03_Protocolos_Datos/ICD_Payload_LoRa.md",
-    "README.md",
+    "01_Documentacion/03_Protocolos_Datos/Estructura_Archivos_MicroSD.md",
+    "01_Documentacion/01_Especificaciones/SRS_Requerimientos_Sistema.md",
     "01_Documentacion/01_Especificaciones/Manual_de_Operacion_y_Mantenimiento.md",
-    "01_Documentacion/02_Arquitectura_Hardware/Sin nombre",
+    "01_Documentacion/02_Arquitectura_Hardware/Pines_y_Bus_I2C.md",
+    "01_Documentacion/Indice.md",
+    "01_Documentacion/05_Gestion_y_Cotizaciones/Hoja_de_Ruta_y_Cronograma.md",
+    "01_Documentacion/04_Firmware_y_Software/Guia_de_Configuracion_PlatformIO.md",
+    "01_Documentacion/04_Firmware_y_Software/FSD_Especificacion_Firmware.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Emisor.md",
+    "README.md",
+    "01_Documentacion/01_Especificaciones/Cotizacion_Agosto2026.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Presupuesto_Energetico_Nodo_Gateway.md",
+    "01_Documentacion/02_Arquitectura_Hardware/Guia_de_Configuracion_PlatformIO.md",
+    "01_Documentacion/02_Arquitectura_Hardware/BOM_Lista_Materiales.md",
+    "03_Firmware/Test/Test_Sistema_Completo_Receptor.ino",
+    "03_Firmware/Test/Sin confirmar 889976.crdownload",
+    "03_Firmware/Test/Test_Sistema_Completo_Emisor.ino",
+    "03_Firmware/Test/Sin confirmar 257173.crdownload",
+    "03_Firmware/Test/Test_BMP280_Directo/Test_BMP280_Directo.ino",
+    "03_Firmware/Test/Test_BMP280_Directo",
+    "03_Firmware/Test/Adafruit_Sensor/Adafruit_Sensor.ino",
+    "03_Firmware/Test/Adafruit_Sensor",
+    "05_Code/src/Sin confirmar 406627.crdownload",
+    "05_Code/Sin confirmar 210755.crdownload",
+    "01_Documentacion/Index.md",
+    "01_Documentacion/03_Protocolos_Datos/FSD_Especificacion_Firmware.md",
     "01_Documentacion/02_Arquitectura_Hardware/Calculo_Autonomia_y_Energia.md",
-    "03_Firmware/Test/Test_Adafruit_MLX90614-OK/Test_Adafruit_MLX90614-OK 1.ino",
-    "01_Documentacion/00_Meta/Attachments",
     "01_Documentacion/02_Arquitectura_Hardware/Lista_de_Materiales.md"
   ]
 }

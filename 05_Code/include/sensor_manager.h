@@ -2,20 +2,10 @@
  * =============================================================================
  * sensor_manager.h
  * -----------------------------------------------------------------------------
- * Interfaz GENÉRICA para la lectura de sensores por canal del PCA9548A.
- *
- * IMPORTANTE: esta fase entrega el ESQUELETO del orquestador, sin drivers
- * de sensores concretos todavía (BME280 / SHT3x / MPU6050 se integran más
- * adelante, cuando se defina qué sensores van en qué canal). Por eso
- * readChannel() y readExtendedChannel() devuelven SensorStatus::NOT_IMPLEMENTED:
- * el objetivo de este archivo es fijar el CONTRATO (qué recibe, qué
- * devuelve, cómo se manejan timeouts) para que integrar un driver real
- * después sea reemplazar el cuerpo de una función, no rediseñar la FSM.
- *
- * Patrón de timeout no bloqueante: readWithTimeout() muestra cómo debe
- * envolverse cualquier lectura real (ej. tiempo de conversión de un
- * sensor) usando millis() en vez de delay(), para que un sensor colgado
- * nunca detenga el loop() principal.
+ * ACTUALIZADO: reemplaza el set de sensores anterior (SHT31/MPU6050) por
+ * el confirmado: 3x MLX90614 (estratos de copa, Canales 0-2 vía P82B715),
+ * BME280 base (Canal 3, local), sonda capacitiva de suelo y batería
+ * (ambas por ADC, sin pasar por el multiplexor I2C).
  * =============================================================================
  */
 
@@ -23,59 +13,69 @@
 #define SENSOR_MANAGER_H
 
 #include <Arduino.h>
+#include <Adafruit_BME280.h>
+#include <Adafruit_MLX90614.h>
+#include <Adafruit_Sensor.h>
+
 #include "pca9548a.h"
-
-enum class SensorStatus {
-    OK,               // Lectura válida.
-    TIMEOUT,          // El sensor no respondió dentro de SENSOR_READ_TIMEOUT_MS.
-    NO_ACK,           // El canal no tiene ningún dispositivo respondiendo (I2C NACK).
-    MUX_ERROR,        // Falló la selección del canal en el PCA9548A.
-    NOT_IMPLEMENTED   // Aún no hay driver real asignado a este canal (fase actual).
-};
-
-struct SensorReading {
-    uint8_t channel = 0;
-    SensorStatus status = SensorStatus::NOT_IMPLEMENTED;
-
-    // Valores genéricos: hasta que se asignen drivers reales, cada sensor
-    // decidirá qué representa value1/2/3 (ej. BME280: temp/hum/presión;
-    // MPU6050: iría en una estructura aparte por tener 6 ejes).
-    float value1 = NAN;
-    float value2 = NAN;
-    float value3 = NAN;
-
-    unsigned long timestampMs = 0;
-};
+#include "telemetry.h"
 
 class SensorManager {
 public:
     explicit SensorManager(PCA9548A &mux);
 
     /**
-     * Lee un canal LOCAL (1-7). Selecciona el canal en el multiplexor y
-     * delega en el driver correspondiente (a integrar en una fase
-     * posterior). Por ahora retorna NOT_IMPLEMENTED si la selección de
-     * canal fue exitosa, o MUX_ERROR si no.
+     * Lee los 3 MLX90614, el BME280 base, la sonda de suelo y la batería,
+     * llenando `payload`. Cada sensor se intenta de forma independiente:
+     * si uno falla, los demás igual se leen y se transmiten.
+     *
+     * @return true si AL MENOS una lectura fue exitosa.
      */
-    SensorReading readChannel(uint8_t channel);
+    bool readAllInto(TelemetryPayload &payload);
 
     /**
-     * Lee el Canal 0 (extensor P82B715 / bus largo Cat6). Usa
-     * mux.selectExtendedChannel()/releaseExtendedChannel() para aplicar
-     * automáticamente la frecuencia reducida durante la lectura.
+     * Lee SOLO la sonda de suelo y la batería (ambas por ADC, no pasan
+     * por el mux I2C). Camino rápido para cuando mux.begin() falló: evita
+     * gastar ~4 x I2C_TRANSACTION_TIMEOUT_MS en intentos de canal que ya
+     * se sabe que van a fallar, con el CPU despierto y consumiendo.
+     *
+     * @return true si AL MENOS una de las dos lecturas fue exitosa.
      */
-    SensorReading readExtendedChannel();
+    bool readSoilAndBatteryOnly(TelemetryPayload &payload);
 
 private:
     PCA9548A &_mux;
 
+    Adafruit_MLX90614 _mlxTop;
+    Adafruit_MLX90614 _mlxMid;
+    Adafruit_MLX90614 _mlxLow;
+    Adafruit_BME280 _bmeBase;
+
+    bool _mlxTopReady = false;
+    bool _mlxMidReady = false;
+    bool _mlxLowReady = false;
+    bool _bmeBaseReady = false;
+
     /**
-     * Plantilla del patrón de timeout no bloqueante. Un driver real debe
-     * reemplazar el cuerpo (la sección "TODO: lectura real del sensor")
-     * conservando el chequeo de millis() para no dejar nunca un
-     * while(true) o delay() esperando al sensor.
+     * Lee un MLX90614 en el canal indicado (aislando el canal a 100kHz
+     * vía el mux). `mlx` y `ready` son la instancia de driver y el flag
+     * de estado correspondientes a ESE canal específico. `outTempC_x100`
+     * es una VARIABLE LOCAL del llamador (no un campo del struct packed):
+     * tomar una referencia directa a un miembro de TelemetryPayload
+     * (que es __attribute__((packed)), por lo tanto potencialmente
+     * desalineado) no es seguro — el llamador debe copiar el valor al
+     * struct después de que esta función retorne.
      */
-    SensorReading readWithTimeout(uint8_t channel, uint32_t timeoutMs);
+    bool readMLX(uint8_t channel, Adafruit_MLX90614 &mlx, bool &ready,
+                 int16_t &outTempC_x100, uint16_t okFlag, TelemetryPayload &payload);
+
+    bool readBaseBME280(TelemetryPayload &payload);
+
+    /** Sonda capacitiva de suelo, por ADC (no pasa por el mux I2C). */
+    bool readSoilMoisture(TelemetryPayload &payload);
+
+    /** Divisor resistivo de batería, por ADC. */
+    void readBatteryVoltage(TelemetryPayload &payload);
 };
 
 #endif // SENSOR_MANAGER_H
