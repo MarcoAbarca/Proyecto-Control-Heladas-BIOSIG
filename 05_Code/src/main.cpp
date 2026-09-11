@@ -164,17 +164,17 @@ void setup() {
     // lecturas ADC (independientes del bus I2C) y se marca el error.
     // ---------------------------------------------------------------
     TelemetryPayload payload = Telemetry::makeEmptyPayload(NODE_ID, g_sequenceNumber);
-    bool anyOk;
+    bool anyI2COk;
 
     if (muxOk) {
-        anyOk = sensorManager.readAllInto(payload);
+        anyI2COk = sensorManager.readAllInto(payload);
     } else {
         Serial.println(F("[FSM] Mux no disponible: se omiten los 4 canales I2C, salto directo a ADC."));
         payload.statusFlags |= FLAG_I2C_BUS_ERROR;
-        anyOk = sensorManager.readSoilAndBatteryOnly(payload);
+        anyI2COk = sensorManager.readSoilOnly(payload);
     }
 
-    if (!anyOk) {
+    if (!anyI2COk) {
         g_consecutiveEmptyReads++;
         Serial.printf("[FSM] ADVERTENCIA: ningun sensor I2C respondio este ciclo (racha: %u).\n",
                       g_consecutiveEmptyReads);
@@ -206,7 +206,7 @@ void setup() {
     // -----------------------------------------------------------------
     // Se intenta transmitir SIEMPRE, incluso en el escenario más
     // degradado (bus caído + LittleFS caído): un payload con
-    // statusFlags=0x00 pero con nodeId/seq/bateria válidos ya le dice al
+    // statusFlags=0x00 pero con nodeId/seq válidos ya le dice al
     // Receptor "este nodo esta vivo pero con fallas", que es justamente
     // la "transmisión de emergencia" pedida -- no hay un modo separado,
     // es el mismo transmitPayload() de siempre aplicado al mismo payload
@@ -265,6 +265,16 @@ static bool hasPendingPayload = false;
 
 static uint32_t packetsReceivedCount = 0;
 static uint32_t packetsLoggedCount = 0;
+static unsigned long lastStatusReport = 0;
+
+static const __FlashStringHelper* receptorStateName(ReceptorState state) {
+    switch (state) {
+        case ReceptorState::INIT: return F("INIT");
+        case ReceptorState::LISTEN_P2P: return F("LISTEN_P2P");
+        case ReceptorState::BRIDGE_TTN: return F("BRIDGE_TTN");
+        default: return F("UNKNOWN");
+    }
+}
 
 void setup() {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -278,10 +288,19 @@ void setup() {
 }
 
 void loop() {
+    static ReceptorState previousState = ReceptorState::INIT;
+    if (currentState != previousState) {
+        Serial.printf("[FSM] Estado: %s -> %s\n",
+                      receptorStateName(previousState),
+                      receptorStateName(currentState));
+        previousState = currentState;
+    }
+
     switch (currentState) {
 
         // ---------------------------------------------------------------
         case ReceptorState::INIT: {
+            Serial.println(F("[FSM] INIT: inicializando radio LoRa..."));
             if (!loraManager.begin()) {
                 Serial.println(F("[FSM] ERROR: radio LoRa no disponible. Reintentando..."));
                 break; // Reintento no bloqueante en la proxima vuelta de loop().
@@ -292,10 +311,14 @@ void loop() {
             // sube a TTN) pero sin backup local, y lo deja bien logueado.
             if (!sdManager.begin()) {
                 Serial.println(F("[FSM] ADVERTENCIA: MicroSD no disponible, se continua sin respaldo local."));
+            } else {
+                Serial.println(F("[FSM] MicroSD lista para respaldo."));
             }
 
-            Serial.println(F("[FSM] Inicializacion completa. Escuchando P2P.\n"));
+            Serial.printf("[FSM] Inicializacion completa. Escuchando P2P. Uplink cada %lu ms.\n",
+                          static_cast<unsigned long>(TTN_UPLINK_INTERVAL_MS));
             lastUplinkTime = millis();
+            lastStatusReport = millis();
             currentState = ReceptorState::LISTEN_P2P;
             break;
         }
@@ -309,6 +332,9 @@ void loop() {
                 Serial.printf("[FSM] Paquete P2P #%lu recibido (nodo=%d, seq=%lu).\n",
                               (unsigned long)packetsReceivedCount, incoming.nodeId,
                               (unsigned long)incoming.sequenceNumber);
+                Serial.printf("[FSM] Estado payload: flags=0x%04X, SD=%s.\n",
+                              incoming.statusFlags,
+                              sdManager.isReady() ? "disponible" : "no disponible");
 
                 if (incoming.statusFlags & FLAG_ALERT_FROST) {
                     Serial.println(F("[FSM] *** El nodo emisor reporto riesgo de helada. ***"));
@@ -317,6 +343,8 @@ void loop() {
                 if (sdManager.isReady()) {
                     if (sdManager.logPayload(incoming)) {
                         packetsLoggedCount++;
+                        Serial.printf("[FSM] Payload guardado en SD (total=%lu).\n",
+                                      static_cast<unsigned long>(packetsLoggedCount));
                     } else {
                         Serial.println(F("[FSM] ERROR al escribir en SD, el dato solo llegara via TTN."));
                     }
@@ -326,10 +354,22 @@ void loop() {
                 hasPendingPayload = true;
             }
 
+            if (millis() - lastStatusReport >= 10000UL) {
+                Serial.printf("[FSM] LISTEN_P2P activo: recibidos=%lu, guardados=%lu, pendiente=%s, proximo uplink en %lu ms.\n",
+                              static_cast<unsigned long>(packetsReceivedCount),
+                              static_cast<unsigned long>(packetsLoggedCount),
+                              hasPendingPayload ? "si" : "no",
+                              static_cast<unsigned long>(TTN_UPLINK_INTERVAL_MS) -
+                                  min(static_cast<unsigned long>(millis() - lastUplinkTime),
+                                      static_cast<unsigned long>(TTN_UPLINK_INTERVAL_MS)));
+                lastStatusReport = millis();
+            }
+
             // Ventana de tiempo cumplida: se interrumpe la escucha P2P
             // para hacer el puente hacia TTN (ver time-multiplexing en
             // lora_manager.h). No se hace por cada paquete individual.
             if (millis() - lastUplinkTime >= TTN_UPLINK_INTERVAL_MS) {
+                Serial.println(F("[FSM] Ventana TTN cumplida: cambiando a BRIDGE_TTN."));
                 currentState = ReceptorState::BRIDGE_TTN;
             }
             break;
@@ -337,6 +377,10 @@ void loop() {
 
         // ---------------------------------------------------------------
         case ReceptorState::BRIDGE_TTN: {
+            bool p2pReady = true;
+            Serial.printf("[FSM] BRIDGE_TTN: payload pendiente=%s.\n",
+                          hasPendingPayload ? "si" : "no");
+
             if (hasPendingPayload) {
                 Serial.println(F("[FSM] Iniciando puente hacia TTN (radio deja de escuchar P2P)..."));
 
@@ -344,17 +388,24 @@ void loop() {
                     Serial.println(F("[FSM] Uplink a TTN exitoso."));
                 } else {
                     Serial.println(F("[FSM] Uplink a TTN fallido (el dato ya quedo respaldado en SD)."));
+                    // bridgeToTTN() ya intenta restaurar P2P. Este segundo
+                    // intento evita declarar LISTEN_P2P si esa restauracion
+                    // fallo por un estado transitorio del radio.
+                    p2pReady = loraManager.beginP2PListen();
                 }
-
-                hasPendingPayload = false;
             } else {
                 Serial.println(F("[FSM] Sin datos nuevos desde el ultimo uplink, se omite este ciclo TTN."));
             }
 
-            // bridgeToTTN() ya deja el radio de vuelta en modo P2P
-            // internamente (ver lora_manager.cpp); solo resta reprogramar
-            // la próxima ventana y volver a escuchar.
+            if (!p2pReady) {
+                Serial.println(F("[FSM] ERROR: escucha P2P no restaurada. Volviendo a INIT para reintentar el radio."));
+                currentState = ReceptorState::INIT;
+                break;
+            }
+
+            hasPendingPayload = false;
             lastUplinkTime = millis();
+            Serial.println(F("[FSM] Radio P2P restaurada. Volviendo a LISTEN_P2P."));
             currentState = ReceptorState::LISTEN_P2P;
             break;
         }

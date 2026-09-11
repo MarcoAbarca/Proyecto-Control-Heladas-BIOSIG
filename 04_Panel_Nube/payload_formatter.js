@@ -27,7 +27,7 @@
  *   bytes 13-14  : humBasePct_x100    (uint16 LE)
  *   bytes 15-16  : pressureHpa_x10    (uint16 LE)
  *   bytes 17-18  : soilMoisturePct_x100 (uint16 LE)
- *   bytes 19-20  : batteryMilliVolts  (uint16 LE)
+ *   bytes 19-20  : tempSoilC_x100    (int16 LE)
  *   bytes 21-22  : statusFlags        (uint16 LE)
  *   TOTAL: 23 bytes
  * =============================================================================
@@ -35,8 +35,8 @@
 
 function decodeUplink(input) {
     var bytes = input.bytes;
-    if (bytes.length < 23) {
-        return { errors: ["Payload corto (< 23 bytes): " + bytes.length] };
+    if (!Array.isArray(bytes) || bytes.length !== 23) {
+        return { errors: ["Payload invalido: se esperaban 23 bytes y llegaron " + (bytes ? bytes.length : 0)] };
     }
 
     function readUInt8(offset) {
@@ -77,7 +77,7 @@ function decodeUplink(input) {
             pressureBase:  readUInt16LE(15) / 10.0, // OJO: escala x10, no x100
 
             soilMoisturePct: readUInt16LE(17) / 100.0,
-            batteryMilliVolts: readUInt16LE(19),
+            tempSoilC:      readInt16LE(19) / 100.0,
 
             statusFlags: statusFlags,
             flags: {
@@ -86,7 +86,7 @@ function decodeUplink(input) {
                 mlxLowOk:      (statusFlags & 0x0004) !== 0,
                 baseBmeOk:     (statusFlags & 0x0008) !== 0,
                 soilOk:        (statusFlags & 0x0010) !== 0,
-                lowBattery:    (statusFlags & 0x0020) !== 0,
+                soilTempOk:    (statusFlags & 0x0020) !== 0,
                 i2cBusError:   (statusFlags & 0x0040) !== 0,
                 frostRisk:      (statusFlags & 0x0100) !== 0,
                 winterHeatRisk: (statusFlags & 0x0200) !== 0

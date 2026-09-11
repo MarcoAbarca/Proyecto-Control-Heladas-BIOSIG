@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sensagri - Control de Heladas</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- BARRA LATERAL CON NAVEGACIÓN POR ANCLAS -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-icon">🌱</div>
+        <div>
+          <p class="brand-eyebrow">SENSAGRI</p>
+          <h1>Control Heladas</h1>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <a href="#overview" class="nav-item active">📊 Vista General</a>
+        <a href="#sensors" class="nav-item">🌡️ Sensores</a>
+        <a href="#alerts" class="nav-item">🚨 Alertas</a>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="status-dot" id="healthDot"></span>
+        <span id="healthText">Conectando...</span>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL FLUIDO -->
+    <main class="main-content">
+      
+      <!-- ENCABEZADO DE CONTROL -->
+      <header class="top-header" id="overview">
+        <div>
+          <p class="eyebrow">SELECCIÓN DE NODO</p>
+          <div id="nodeTabsContainer" class="node-tabs-container">
+            <p class="empty">Cargando nodos del campo...</p>
+          </div>
+        </div>
+
+        <div class="time-controls-finance" id="financeTimeControls">
+          <button class="time-btn" data-hours="1">1H</button>
+          <button class="time-btn" data-hours="6">6H</button>
+          <button class="time-btn active" data-hours="24">24H</button>
+          <button class="time-btn" data-hours="72">3D</button>
+          <button class="time-btn" data-hours="168">7D</button>
+        </div>
+      </header>
+
+      <!-- RESUMEN GENERAL DEL CAMPO -->
+      <section class="kpi-grid">
+        <div class="kpi-card highlight">
+          <p class="kpi-label">Estado del Campo</p>
+          <p class="kpi-value" id="fieldState">Cargando...</p>
+          <span class="kpi-sub" id="fieldDetail">Analizando red multi-nodo</span>
+        </div>
+        <div class="kpi-card">
+          <p class="kpi-label">Temperatura Mínima</p>
+          <p class="kpi-value warning" id="minTemp">-- °C</p>
+          <span class="kpi-sub">Mínimo en período seleccionado</span>
+        </div>
+        <div class="kpi-card">
+          <p class="kpi-label">Última Recepción</p>
+          <p class="kpi-value" id="lastSeen">--</p>
+          <span class="kpi-sub" id="lastSeenDetail">--</span>
+        </div>
+        <div class="kpi-card">
+          <p class="kpi-label">Pérdidas Detectadas</p>
+          <p class="kpi-value" id="missedCount">--</p>
+          <span class="kpi-sub">Según secuencia del nodo</span>
+        </div>
+      </section>
+
+      <!-- GRÁFICO HISTÓRICO Y FICHA DE SENSORES EN TIEMPO REAL -->
+      <section class="content-grid" id="sensors">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">SENSOR AMBIENTAL BME280</p>
+              <h2>Temperatura Base (Aire)</h2>
+            </div>
+            <span id="updatedText" class="kpi-sub">--</span>
+          </div>
+          <div class="chart-wrap">
+            <svg id="temperatureChart" viewBox="0 0 800 240" role="img" aria-label="Gráfico histórico de temperatura"></svg>
+            <p class="empty" id="chartEmpty" hidden>Todavía no hay mediciones en el rango seleccionado.</p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h3>Detalle de Sensores</h3>
+            <span id="selectedNodeLabel" class="tab-badge">--</span>
+          </div>
+          <div id="sensorList" class="sensor-list">
+            <p class="empty">Selecciona un nodo para ver sus sensores.</p>
+          </div>
+        </article>
+      </section>
+
+      <!-- HISTÓRICO DE REGISTROS Y MÓDULO DE ALERTAS -->
+      <section class="content-grid" id="alerts">
+        <article class="panel">
+          <div class="panel-heading">
+            <h3>Histórico de Telemetría</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="telemetry-table">
+              <thead>
+                <tr>
+                  <th>Nodo</th>
+                  <th>Fecha / Hora</th>
+                  <th>Seq</th>
+                  <th>Copa Sup.</th>
+                  <th>Copa Med.</th>
+                  <th>Copa Inf.</th>
+                  <th>Base</th>
+                  <th>Hum. Base</th>
+                  <th>Temp. Suelo</th>
+                </tr>
+              </thead>
+              <tbody id="telemetryTableBody">
+                <tr><td colspan="9" class="table-empty">Cargando registros...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h3>Configuración de Alertas</h3>
+            <span id="settingsStatus" class="kpi-sub">--</span>
+          </div>
+          <form id="alertSettingsForm" class="config-form">
+            <div class="form-group">
+              <label><input type="checkbox" id="frostEnabled"> Alerta de helada</label>
+              <div>Activar bajo <input type="number" id="frostThresholdC" step="0.5" value="2.0"> °C</div>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="heatEnabled"> Alerta de temperatura alta</label>
+              <div>Activar sobre <input type="number" id="heatThresholdC" step="0.5" value="25.0"> °C</div>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="sensorEnabled"> Alertar sensor defectuoso</label>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="connectivityEnabled"> Alertar pérdida de conexión</label>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="telegramEnabled"> Enviar también a Telegram</label>
+            </div>
+            <button type="submit" id="saveSettingsButton" class="btn-primary" disabled>Guardar configuración</button>
+          </form>
+
+          <div style="margin-top: 1rem;">
+            <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Alertas Recientes</h4>
+            <div id="alertsList" class="alerts-list">
+              <p class="empty">No hay alertas registradas.</p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

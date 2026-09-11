@@ -109,6 +109,8 @@ private:
     bool _radioReady = false;
 
 #ifdef NODE_ROLE_RECEPTOR
+    // La sesión LoRaWAN y sus contadores deben sobrevivir entre uplinks.
+    LoRaWANNode *_ttnNode = nullptr;
     bool _joinedTTN = false;
 #endif
 

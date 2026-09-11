@@ -27,7 +27,11 @@ static void onP2PPacketReceived() {
 // Constructor
 // -----------------------------------------------------------------------------
 LoRaManager::LoRaManager()
-    : _radio(new Module(LORA_CS_PIN, LORA_DIO1_PIN, LORA_RST_PIN, LORA_BUSY_PIN)) {}
+    : _radio(new Module(LORA_CS_PIN, LORA_DIO1_PIN, LORA_RST_PIN, LORA_BUSY_PIN)) {
+#ifdef NODE_ROLE_RECEPTOR
+    _ttnNode = new LoRaWANNode(&_radio, &AU915, TTN_SUBBAND);
+#endif
+}
 
 // -----------------------------------------------------------------------------
 // begin()
@@ -51,7 +55,10 @@ bool LoRaManager::begin() {
 #ifdef NODE_ROLE_RECEPTOR
     // El Receptor arranca escuchando P2P; el bridging a TTN se dispara
     // explícitamente desde la FSM de main.cpp, no automáticamente aquí.
-    beginP2PListen();
+    if (!beginP2PListen()) {
+        Serial.println(F("[LoRaManager] ERROR: no se pudo activar la escucha P2P inicial."));
+        return false;
+    }
 #endif
 
     return true;
@@ -129,13 +136,24 @@ bool LoRaManager::checkReceivedP2P(TelemetryPayload &outPayload) {
 
     g_p2pPacketReceived = false;
 
+    const size_t packetLength = _radio.getPacketLength();
+    if (packetLength != sizeof(TelemetryPayload)) {
+        Serial.printf(
+            "[LoRaManager] ERROR: tamano P2P invalido (%u bytes; esperado %u).\n",
+            static_cast<unsigned>(packetLength),
+            static_cast<unsigned>(sizeof(TelemetryPayload))
+        );
+        beginP2PListen();
+        return false;
+    }
+
     uint8_t buffer[sizeof(TelemetryPayload)];
     int16_t state = _radio.readData(buffer, sizeof(buffer));
 
     // Siempre se re-arma la recepción, exista o no un payload válido:
     // de lo contrario el Receptor dejaría de escuchar tras el primer
     // paquete corrupto.
-    _radio.startReceive();
+    beginP2PListen();
 
     if (state != RADIOLIB_ERR_NONE) {
         Serial.printf("[LoRaManager] ERROR: readData() fallo, codigo %d\n", state);
@@ -157,14 +175,18 @@ bool LoRaManager::checkReceivedP2P(TelemetryPayload &outPayload) {
 }
 
 bool LoRaManager::joinTTN() {
-    if (_joinedTTN) {
+    if (_joinedTTN && _ttnNode != nullptr) {
         return true; // Ya hay sesion activa, no repetir el join.
+    }
+
+    if (_ttnNode == nullptr) {
+        Serial.println(F("[LoRaManager] ERROR: instancia LoRaWAN no disponible."));
+        beginP2PListen();
+        return false;
     }
 
     // Reconfigura el radio a parámetros LoRaWAN/AU915 (distinto de los
     // parámetros P2P crudos usados en beginP2PListen()).
-    LoRaWANNode node(&_radio, &AU915, TTN_SUBBAND);
-
     uint64_t joinEUI = 0, devEUI = 0;
     // TTN_JOIN_EUI/TTN_DEV_EUI en config.h están en formato de arreglo de
     // bytes (MSB primero); se combinan aquí al formato uint64_t que pide
@@ -174,16 +196,11 @@ bool LoRaManager::joinTTN() {
         devEUI  = (devEUI  << 8) | TTN_DEV_EUI[i];
     }
 
-    int16_t state = node.beginOTAA(joinEUI, devEUI,
-                                    const_cast<uint8_t*>(TTN_APP_KEY),
-                                    const_cast<uint8_t*>(TTN_APP_KEY));
-    if (state != RADIOLIB_ERR_NONE) {
-        Serial.printf("[LoRaManager] ERROR: beginOTAA() fallo, codigo %d\n", state);
-        beginP2PListen(); // No dejar el radio en un estado a medio configurar.
-        return false;
-    }
+    _ttnNode->beginOTAA(joinEUI, devEUI,
+                         const_cast<uint8_t*>(TTN_APP_KEY),
+                         const_cast<uint8_t*>(TTN_APP_KEY));
 
-    state = node.activateOTAA();
+    int16_t state = _ttnNode->activateOTAA();
     // RADIOLIB_LORAWAN_NEW_SESSION: join exitoso, sesion nueva.
     if (state != RADIOLIB_LORAWAN_NEW_SESSION && state != RADIOLIB_ERR_NONE) {
         Serial.printf("[LoRaManager] ERROR: activateOTAA() fallo, codigo %d\n", state);
@@ -201,26 +218,21 @@ bool LoRaManager::bridgeToTTN(const TelemetryPayload &payload) {
         return false; // joinTTN() ya restauro el modo P2P si fallo.
     }
 
-    LoRaWANNode node(&_radio, &AU915, TTN_SUBBAND);
-
-    // NOTA: node aquí es una instancia local nueva por llamada. RadioLib
-    // guarda el estado de sesión OTAA (claves de sesión derivadas) del
-    // lado del propio objeto LoRaWANNode, no del radio — en una
-    // implementación de producción conviene persistir el objeto `node`
-    // (o su sesión serializada) en vez de recrearlo en cada bridge, para
-    // no tener que rehacer el join en cada ciclo. Se deja así en esta
-    // fase para mantener el alcance acotado; es el primer punto a
-    // optimizar si el join a TTN resulta costoso en tiempo de aire.
     // Mismo motivo que en transmitPayload(): sendReceive() de RadioLib
     // tampoco acepta un puntero const, se copia a un buffer local.
     uint8_t buffer[sizeof(TelemetryPayload)];
     memcpy(buffer, &payload, sizeof(TelemetryPayload));
 
-    int16_t state = node.sendReceive(buffer, sizeof(buffer));
+    int16_t state = _ttnNode->sendReceive(buffer, sizeof(buffer));
 
-    // Se vuelve a modo P2P SIEMPRE, haya salido bien o mal el uplink:
-    // el Receptor no puede quedarse sordo por una falla de TTN.
-    beginP2PListen();
+    // Se vuelve a modo P2P haya salido bien o mal el uplink. Si la
+    // restauracion falla, se informa al FSM para que no declare LISTEN_P2P
+    // mientras el radio sigue fuera de escucha.
+    const bool p2pRestored = beginP2PListen();
+    if (!p2pRestored) {
+        Serial.println(F("[LoRaManager] ERROR: no se pudo restaurar la escucha P2P tras el uplink."));
+        return false;
+    }
 
     if (state != RADIOLIB_ERR_NONE && state != RADIOLIB_LORAWAN_NO_DOWNLINK) {
         // RADIOLIB_LORAWAN_NO_DOWNLINK es normal: el uplink salió bien,

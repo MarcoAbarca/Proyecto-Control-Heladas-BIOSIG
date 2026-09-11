@@ -41,9 +41,10 @@ constexpr uint8_t LORA_RST_PIN  = D2;
 constexpr uint8_t LORA_BUSY_PIN = D1;
 constexpr uint8_t LORA_DIO1_PIN = D0;
 
-constexpr uint8_t ADC_SOIL_MOISTURE_PIN = D6;
-constexpr uint8_t ADC_BATTERY_PIN       = D7;
-constexpr float   BATTERY_DIVIDER_RATIO = 2.0f;
+// D6 y D7 NO son pines ADC válidos en XIAO ESP32-S3, los deshabilitamos
+// constexpr uint8_t ADC_SOIL_MOISTURE_PIN = D6;
+// constexpr uint8_t ADC_BATTERY_PIN       = D7;
+// constexpr float   BATTERY_DIVIDER_RATIO = 2.0f;
 
 // Calibración de suelo -- PLACEHOLDERS sin calibrar (ver Test_ADC_Suelo_Bateria.ino)
 constexpr uint16_t SOIL_ADC_DRY_RAW = 3000;
@@ -131,7 +132,7 @@ void setup() {
 
     int16_t state = radio.begin();
     if (state != RADIOLIB_ERR_NONE) {
-        Serial.printf("ERROR CRITICO: radio.begin() fallo (codigo %d). Revisar SPI/soldadura.\n", state);
+        Serial.printf("ERROR CRITICO: radio.begin() fallo (codigo %d). Revisar SPI/soldadura/ANTENA.\n", state);
     } else {
         radio.setFrequency(LORA_FREQUENCY_MHZ);
         radio.setBandwidth(LORA_BANDWIDTH_KHZ);
@@ -195,17 +196,10 @@ void loop() {
     }
     closeAllChannels();
 
-    // --- Suelo + batería (ADC, sin pasar por el mux) ---
-    int soilRaw = analogRead(ADC_SOIL_MOISTURE_PIN);
-    float soilPct = (float)(SOIL_ADC_DRY_RAW - soilRaw) / (float)(SOIL_ADC_DRY_RAW - SOIL_ADC_WET_RAW) * 100.0f;
-    soilPct = constrain(soilPct, 0.0f, 100.0f);
-    payload.soilMoisturePct_x100 = (uint16_t)(soilPct * 100);
-    payload.statusFlags |= FLAG_SOIL_OK;
-
-    uint32_t battMv = (uint32_t)(analogReadMilliVolts(ADC_BATTERY_PIN) * BATTERY_DIVIDER_RATIO);
-    payload.batteryMilliVolts = (uint16_t)battMv;
-    Serial.printf("  [OK] Suelo (sin calibrar) %.1f%% (raw=%d) | Bateria %lu mV\n",
-                  soilPct, soilRaw, (unsigned long)battMv);
+    // --- Suelo + batería (deshabilitados en este test - D6/D7 no son ADC válidos) ---
+    payload.soilMoisturePct_x100 = 0;
+    payload.batteryMilliVolts = 0;
+    Serial.println(F("  [OK] Suelo/Bateria deshabilitados en este test (D6/D7 no son ADC válidos)"));
 
     // --- Alertas ---
     float refTemp = NAN;

@@ -8,13 +8,16 @@
 #include "config.h"
 #include "i2c_bus.h"
 
-SensorManager::SensorManager(PCA9548A &mux) : _mux(mux) {}
+SensorManager::SensorManager(PCA9548A &mux)
+    : _mux(mux), _soilOneWire(SOIL_TEMPERATURE_DATA_PIN), _soilTemperature(&_soilOneWire) {
+    _soilTemperature.begin();
+}
 
 // -----------------------------------------------------------------------------
 // readAllInto()
 // -----------------------------------------------------------------------------
 bool SensorManager::readAllInto(TelemetryPayload &payload) {
-    bool anyOk = false;
+    bool anyI2COk = false;
 
     // Variables LOCALES (no referencias a campos packed) — ver nota en
     // sensor_manager.h sobre por qué readMLX() no escribe directo al struct.
@@ -22,34 +25,34 @@ bool SensorManager::readAllInto(TelemetryPayload &payload) {
 
     if (readMLX(CH_MLX_TOP, _mlxTop, _mlxTopReady, tempTop, FLAG_MLX_TOP_OK, payload)) {
         payload.tempCanopyTop_x100 = tempTop;
-        anyOk = true;
+        anyI2COk = true;
     }
     if (readMLX(CH_MLX_MID, _mlxMid, _mlxMidReady, tempMid, FLAG_MLX_MID_OK, payload)) {
         payload.tempCanopyMid_x100 = tempMid;
-        anyOk = true;
+        anyI2COk = true;
     }
     if (readMLX(CH_MLX_LOW, _mlxLow, _mlxLowReady, tempLow, FLAG_MLX_LOW_OK, payload)) {
         payload.tempCanopyLow_x100 = tempLow;
-        anyOk = true;
+        anyI2COk = true;
     }
 
-    anyOk |= readBaseBME280(payload);
+    anyI2COk |= readBaseBME280(payload);
 
     _mux.disableAll(); // Estado seguro: cierra canal I2C antes de pasar al ADC.
 
-    anyOk |= readSoilMoisture(payload);
-    readBatteryVoltage(payload); // Siempre se intenta; no participa del "anyOk".
+    readSoilMoisture(payload);
+    readSoilTemperature(payload);
 
-    return anyOk;
+    return anyI2COk;
 }
 
 // -----------------------------------------------------------------------------
-// readSoilAndBatteryOnly() - camino rápido cuando el mux falló
+// readSoilOnly() - camino rápido cuando el mux falló
 // -----------------------------------------------------------------------------
-bool SensorManager::readSoilAndBatteryOnly(TelemetryPayload &payload) {
-    bool anyOk = readSoilMoisture(payload);
-    readBatteryVoltage(payload);
-    return anyOk;
+bool SensorManager::readSoilOnly(TelemetryPayload &payload) {
+    readSoilMoisture(payload);
+    readSoilTemperature(payload);
+    return false;
 }
 
 // -----------------------------------------------------------------------------
@@ -126,6 +129,12 @@ bool SensorManager::readBaseBME280(TelemetryPayload &payload) {
 // readSoilMoisture() - ADC, no pasa por el mux I2C
 // -----------------------------------------------------------------------------
 bool SensorManager::readSoilMoisture(TelemetryPayload &payload) {
+    if (!SOIL_MOISTURE_ADC_AVAILABLE) {
+        payload.soilMoisturePct_x100 = 0;
+        payload.statusFlags &= static_cast<uint16_t>(~FLAG_SOIL_OK);
+        return false;
+    }
+
     int raw = analogRead(ADC_SOIL_MOISTURE_PIN);
 
     // Mapeo lineal entre los valores RAW calibrados en seco/húmedo
@@ -142,20 +151,21 @@ bool SensorManager::readSoilMoisture(TelemetryPayload &payload) {
 }
 
 // -----------------------------------------------------------------------------
-// readBatteryVoltage() - ADC, no pasa por el mux I2C
+// readSoilTemperature() - DS18B20 por 1-Wire en D7
 // -----------------------------------------------------------------------------
-void SensorManager::readBatteryVoltage(TelemetryPayload &payload) {
-    // analogReadMilliVolts() aplica la curva de calibración de fábrica del
-    // ADC del ESP32-S3 (eFuse), corrigiendo la no linealidad cerca de los
-    // extremos del rango en vez de una lectura RAW sin corregir.
-    uint32_t pinMilliVolts = analogReadMilliVolts(ADC_BATTERY_PIN);
-    payload.batteryMilliVolts = static_cast<uint16_t>(pinMilliVolts * BATTERY_DIVIDER_RATIO);
+bool SensorManager::readSoilTemperature(TelemetryPayload &payload) {
+    _soilTemperature.requestTemperatures();
+    const float tempC = _soilTemperature.getTempCByIndex(0);
 
-    // Umbral de batería baja: 3.4V es un punto razonable de corte para
-    // Li-Ion antes de la zona de descarga profunda, pero no está
-    // formalizado como constante de config.h todavía — placeholder.
-    constexpr uint16_t LOW_BATTERY_MV = 3400;
-    if (payload.batteryMilliVolts > 0 && payload.batteryMilliVolts < LOW_BATTERY_MV) {
-        payload.statusFlags |= FLAG_LOW_BATTERY;
+    if (tempC == DEVICE_DISCONNECTED_C || isnan(tempC)) {
+        payload.tempSoilC_x100 = 0;
+        payload.statusFlags &= static_cast<uint16_t>(~FLAG_SOIL_TEMP_OK);
+        Serial.println(F("[SensorManager] ERROR: DS18B20 de suelo no responde."));
+        return false;
     }
+
+    payload.tempSoilC_x100 = Telemetry::packScaledInt16(tempC, TEMP_SCALE_FACTOR);
+    payload.statusFlags |= FLAG_SOIL_TEMP_OK;
+    return true;
 }
+

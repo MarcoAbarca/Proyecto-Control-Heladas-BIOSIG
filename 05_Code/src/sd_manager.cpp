@@ -69,7 +69,7 @@ bool SDManager::writeHeaderIfNewFile(const String &filename) {
 
     file.println(F(
         "nodeId,sequenceNumber,tempCanopyTopC,tempCanopyMidC,tempCanopyLowC,"
-        "tempBaseC,humBasePct,pressureHpa,soilMoisturePct,batteryMilliVolts,statusFlags"
+        "tempBaseC,humBasePct,pressureHpa,soilMoisturePct,tempSoilC,statusFlags"
     ));
     file.close();
     return true;
@@ -108,7 +108,7 @@ bool SDManager::logPayload(const TelemetryPayload &payload) {
     file.print(Telemetry::unpackScaled(payload.humBasePct_x100, HUMIDITY_SCALE_FACTOR), 2);file.print(',');
     file.print(Telemetry::unpackScaled(payload.pressureHpa_x10, PRESSURE_SCALE_FACTOR), 1); file.print(',');
     file.print(Telemetry::unpackScaled(payload.soilMoisturePct_x100, SOIL_MOISTURE_SCALE_FACTOR), 2); file.print(',');
-    file.print(payload.batteryMilliVolts);         file.print(',');
+    file.print(Telemetry::unpackScaled(payload.tempSoilC_x100, TEMP_SCALE_FACTOR), 2); file.print(',');
     file.println(payload.statusFlags, BIN);
 
     file.close(); // Incluye flush: los datos quedan persistidos antes de continuar.

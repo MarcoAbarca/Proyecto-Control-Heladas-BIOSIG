@@ -4,7 +4,7 @@
  * -----------------------------------------------------------------------------
  * ACTUALIZADO: reemplaza el struct anterior (SHT3x externo + BME280 local +
  * MPU6050) por el que corresponde a la arquitectura confirmada: 3x
- * MLX90614 (estratos de copa) + BME280 base + humedad de suelo + batería.
+ * MLX90614 (estratos de copa) + BME280 base + humedad de suelo + DS18B20.
  *
  * Este archivo NO estaba en la lista de 4 que pediste actualizar, pero es
  * imprescindible: sensor_manager.cpp no puede llenar campos que ya no
@@ -35,7 +35,7 @@ constexpr float SOIL_MOISTURE_SCALE_FACTOR = 100.0f; // % -> x100
 // sensores, byte alto = alertas agronómicas de negocio)
 // -----------------------------------------------------------------------------
 // ACTUALIZADO: ensanchado de 8 a 16 bits. Los 8 bits originales ya estaban
-// completos (5 flags de sensor + batería + 2 alertas) y no quedaba lugar
+// completos (flags de sensores + 2 alertas) y no quedaba lugar
 // para FLAG_I2C_BUS_ERROR (necesaria para el camino rápido de la Sección
 // 1 del brief). De paso, esto alinea los valores de FLAG_ALERT_FROST/
 // FLAG_ALERT_HEAT_WINTER exactamente con 0x0100/0x0200 tal como los pidió
@@ -46,7 +46,7 @@ constexpr uint16_t FLAG_MLX_MID_OK     = 1 << 1; // Canal 1: MLX90614 estrato me
 constexpr uint16_t FLAG_MLX_LOW_OK     = 1 << 2; // Canal 2: MLX90614 estrato inferior
 constexpr uint16_t FLAG_BASE_BME_OK    = 1 << 3; // Canal 3: BME280 base
 constexpr uint16_t FLAG_SOIL_OK        = 1 << 4; // Sonda capacitiva de suelo (ADC)
-constexpr uint16_t FLAG_LOW_BATTERY    = 1 << 5; // Voltaje de batería bajo
+constexpr uint16_t FLAG_SOIL_TEMP_OK   = 1 << 5; // DS18B20 en D7
 constexpr uint16_t FLAG_I2C_BUS_ERROR  = 1 << 6; // mux.begin() fallo este ciclo (bus caido/no recuperado)
 // Bit 7 libre en el byte bajo (salud de sensores).
 
@@ -72,7 +72,7 @@ struct TelemetryPayload {
 
     uint16_t soilMoisturePct_x100; // Sonda capacitiva de suelo (ADC)
 
-    uint16_t batteryMilliVolts;   // Voltaje de batería en mV
+    int16_t  tempSoilC_x100;      // DS18B20 en D7 - temperatura de suelo
     uint16_t statusFlags;         // ACTUALIZADO: 8 -> 16 bits, ver flags arriba
 } __attribute__((packed));
 #pragma pack(pop)

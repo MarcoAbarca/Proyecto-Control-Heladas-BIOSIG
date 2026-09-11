@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historial - Sensagri</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .filter-card {
+      background: var(--panel);
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      margin-bottom: 20px;
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) auto;
+      gap: 14px;
+      align-items: end;
+    }
+    .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .filter-field input, .filter-field select {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: inherit;
+    }
+    .btn-query {
+      background: var(--teal);
+      color: white;
+      border: 0;
+      padding: 9px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .comment-box {
+      width: 100%;
+      min-width: 160px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+    .btn-save-comment {
+      background: #eef3ed;
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--teal);
+      cursor: pointer;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">SENSAGRI / REGISTROS</p>
+      <h1>Historial y Notas de Campo</h1>
+    </div>
+    <a href="/" style="color: #84cdb8; text-decoration: none; font-weight: 700; font-size: 0.9rem;">
+      ← Volver al Dashboard
+    </a>
+  </header>
+
+  <main class="shell">
+    <section class="filter-card">
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label for="nodeSelect">Nodo</label>
+          <select id="nodeSelect"><option value="all">Todos los Nodos</option></select>
+        </div>
+        <div class="filter-field">
+          <label for="startDate">Desde</label>
+          <input type="date" id="startDate">
+        </div>
+        <div class="filter-field">
+          <label for="endDate">Hasta</label>
+          <input type="date" id="endDate">
+        </div>
+        <button class="btn-query" id="btnSearch">Buscar</button>
+      </div>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">CONSULTA POR FECHA</p>
+          <h2>Mediciones Registradas</h2>
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="telemetry-table">
+          <thead>
+            <tr>
+              <th>Nodo</th>
+              <th>Fecha / Hora</th>
+              <th>Secuencia</th>
+              <th>Temp. Base</th>
+              <th>Temp. Mínima</th>
+              <th>Estado</th>
+              <th>Nota del Técnico / Usuario</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody">
+            <tr><td colspan="7" class="table-empty">Selecciona un rango y presiona Buscar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function formatDate(val) {
+      return val ? new Date(val).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' }) : '--';
+    }
+
+    async function loadNodes() {
+      try {
+        const res = await fetch('/api/nodes');
+        const nodes = await res.json();
+        const select = $('nodeSelect');
+        nodes.forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = n.nodeId;
+          opt.textContent = `${n.displayName} (#${n.nodeId})`;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Error cargando lista de nodos:', err);
+      }
+    }
+
+    async function queryHistory() {
+      const nodeId = $('nodeSelect').value;
+      const startDate = $('startDate').value;
+      const endDate = $('endDate').value;
+      const tbody = $('auditTableBody');
+
+      tbody.innerHTML = '<tr><td colspan="7" class="table-empty">Buscando...</td></tr>';
+
+      try {
+        const url = `/api/telemetry/query?nodeId=${nodeId}&startDate=${startDate}&endDate=${endDate}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="table-empty">No hay registros para este filtro.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(m => {
+          const top = m.tempCanopyTopC;
+          const mid = m.tempCanopyMidC;
+          const low = m.tempCanopyLowC;
+          const base = m.tempBaseC;
+          
+          const validTemps = [top, mid, low, base].filter(v => v !== null && v !== undefined && Number.isFinite(Number(v))).map(Number);
+          const minTemp = validTemps.length ? Math.min(...validTemps).toFixed(2) + ' °C' : '--';
+          const isFrost = validTemps.some(v => v <= 0);
+
+          return `
+            <tr class="${isFrost ? 'row-frost' : ''}">
+              <td class="cell-seq">Nodo #${m.nodeId}</td>
+              <td class="cell-time">${formatDate(m.receivedAt)}</td>
+              <td class="cell-seq">#${m.sequenceNumber ?? '--'}</td>
+              <td class="cell-base ${isFrost ? 'temp-alert' : ''}">${base !== null && base !== undefined ? Number(base).toFixed(2) + ' °C' : '--'}</td>
+              <td>${minTemp}</td>
+              <td><span class="pill ${isFrost ? 'alert' : ''}">${isFrost ? 'Bajo 0°C' : 'Normal'}</span></td>
+              <td>
+                <input type="text" class="comment-box" id="comment-${m.id}" value="${m.userComment ?? ''}" placeholder="Escribir nota...">
+                <button class="btn-save-comment" onclick="saveComment(${m.id})">Guardar</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="table-empty">Error cargando datos: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function saveComment(telemetryId) {
+      const input = $(`comment-${telemetryId}`);
+      try {
+        const res = await fetch(`/api/telemetry/${telemetryId}/comment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment: input.value })
+        });
+        if (res.ok) {
+          alert('✓ Nota guardada');
+        } else {
+          throw new Error('Error al guardar');
+        }
+      } catch (err) {
+        alert('❌ No se pudo guardar la nota');
+      }
+    }
+
+    $('btnSearch').addEventListener('click', queryHistory);
+    loadNodes();
+  </script>
+</body>
+</html>

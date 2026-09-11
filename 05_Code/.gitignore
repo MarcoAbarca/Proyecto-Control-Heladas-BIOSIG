@@ -3,3 +3,7 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/node_modules/

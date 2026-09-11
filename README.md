@@ -57,32 +57,28 @@ El sistema recopila datos de temperatura ambiental y foliar en tres estratos (su
     
 
 ## 📂 Estructura del Repositorio
-Control-Heladas-IoT/
+Proyecto-Control-Heladas-Biosig/
 ├── .gitignore
 ├── README.md
 ├── 01_Documentacion/
-│   ├── Index.md
+│   ├── Indice.md
 │   ├── 01_Especificaciones/
-│   │   └── SRS_Requerimientos_Sistema.md
 │   ├── 02_Arquitectura_Hardware/
-│   │   ├── BOM_Lista_Materiales.md
-│   │   ├── Presupuesto_Energetico_Nodo_Emisor.md
-│   │   ├── Presupuesto_Energetico_Nodo_Gateway.md
-│   │   └── Guia_de_Ensamblado_Nodo_Emisor.md
 │   ├── 03_Protocolos_Datos/
-│   │   └── ICD_Payload_LoRa.md
 │   ├── 04_Firmware_y_Software/
-│   │   └── FSD_Especificacion_Firmware.md
 │   └── 05_Gestion_y_Cotizaciones/
-│       └── Roadmap_Etapas.md
-├── 02_Hardware_Design/
-│   ├── Schematics/
-│   └── 3D_Models/
+├── 02_Diseno_Hardware/
+│   ├── Esquematicos/
+│   └── Modelos_3D/
 ├── 03_Firmware/
-│   ├── Node_Emitter_XIAO_SX1262/
-│   └── Gateway_Receiver_Office/
-└── 04_Cloud_Dashboard/
-    └── payload_formatter.js
+│   └── Test/
+├── 04_Panel_Nube/
+│   └── payload_formatter.js
+└── 05_Code/
+    ├── include/       (Configuración y encabezados C++)
+    ├── src/           (Firmware C++: nodo_emisor y nodo_receptor)
+    ├── backend/       (API Node.js + Ingesta TTN + Dashboard Web)
+    └── platformio.ini (Entornos de compilación PlatformIO)
 ## 🛠️ Tecnologías y Entorno de Desarrollo
 
 - **Entorno de Desarrollo:** PlatformIO / Framework Arduino (C++).

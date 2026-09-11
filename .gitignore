@@ -5,9 +5,11 @@
 *.bin
 *.elf
 
-# Archivos Temporales de Obsidian
-01_Documentacion/.obsidian/workspace.json
-01_Documentacion/.obsidian/workspace-mobile.json
+# Archivos de Obsidian y Archivos Comprimidos
+.obsidian/
+01_Documentacion/.obsidian/
+*.canvas
+*.zip
 
 # Archivos Temporales de Sistema Operativo
 .DS_Store
