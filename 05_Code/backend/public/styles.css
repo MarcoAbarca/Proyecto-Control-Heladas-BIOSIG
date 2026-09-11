@@ -34,14 +34,15 @@ body {
 
 /* SIDEBAR RESTRUCTURADO Y ALINEADO */
 .sidebar {
-  width: 280px;
-  min-width: 280px;
-  background-color: #004d40;
+  width: 240px;
+  min-width: 240px;
+  background-color: #0f172a;
   color: #ffffff;
-  padding: 1.5rem;
+  padding: 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  border-right: 1px solid #1e293b;
 }
 
 .brand {
@@ -119,7 +120,7 @@ body {
   flex-direction: column;
   gap: 1.5rem;
   overflow-y: auto;
-  width: calc(100vw - 280px);
+  width: calc(100vw - 240px);
 }
 
 .top-header {
@@ -211,13 +212,14 @@ body {
 }
 
 .kpi-card.highlight {
-  background-color: var(--accent-green);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #ffffff;
+  border-color: #334155;
 }
 
 .kpi-card.highlight .kpi-label,
 .kpi-card.highlight .kpi-sub {
-  color: #e2e8f0;
+  color: #94a3b8;
 }
 
 .kpi-label {
@@ -324,3 +326,20 @@ body {
 
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .empty { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem 0; }
+
+/* ESTILOS PARA PAGINA HISTORIAL */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.shell {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
